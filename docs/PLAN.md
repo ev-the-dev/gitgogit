@@ -11,21 +11,18 @@ A daemon that watches a source repository and automatically mirrors pushes to on
 ## Project Structure
 
 gitgogit/
-├── cmd/
-│   └── gitgogit/
-│       └── main.go          # Entry point, CLI parsing
-├── internal/
-│   ├── config/
-│   │   └── config.go        # Config file parsing & validation
-│   ├── mirror/
-│   │   └── mirror.go        # Core mirroring logic
-│   ├── auth/
-│   │   ├── ssh.go           # SSH key auth
-│   │   └── token.go         # HTTPS token auth
-│   ├── daemon/
-│   │   └── daemon.go        # Background watcher/scheduler
-│   └── log/
-│       └── log.go           # Structured logging
+├── main.go              # Entry point, CLI parsing
+├── config/
+│   └── config.go        # Config file parsing & validation
+├── mirror/
+│   └── mirror.go        # Core mirroring logic
+├── auth/
+│   ├── ssh.go           # SSH key auth
+│   └── token.go         # HTTPS token auth
+├── daemon/
+│   └── daemon.go        # Background watcher/scheduler
+├── log/
+│   └── log.go           # Structured logging
 ├── config.example.yaml
 ├── go.mod
 └── README.md
@@ -38,18 +35,18 @@ gitgogit/
 
 ```yml
 repos:
-  - name: redis-go-clone
+  - name: {repository_name}
     source:
-      url: git@github.com:ev-the-dev/redis-go-clone.git
+      url: git@github.com:{org|user}/{repository_name}.git
       auth:
         type: ssh
-        key: ~/.ssh/id_ed25519
+        key: ~/.ssh/id_*
     mirrors:
-      - url: git@codeberg.org:ev-the-dev/redis-go-clone.git
+      - url: git@codeberg.org:{org|user}/{repository_name}.git
         auth:
           type: ssh
-          key: ~/.ssh/id_ed25519
-      - url: https://gitlab.com/ev-the-dev/redis-go-clone.git
+          key: ~/.ssh/id_*
+      - url: https://gitlab.com:{org|user}/{repository_name}.git
         auth:
           type: token
           env: GITLAB_TOKEN        # reads from environment variable
