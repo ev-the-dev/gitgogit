@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"gitgogit/config"
-	applog "gitgogit/log"
+	glog "gitgogit/log"
 	"gitgogit/mirror"
 )
 
@@ -54,7 +54,7 @@ func runSync(args []string) {
 	interval := fs.String("interval", "", "poll interval override")
 	logLevel := fs.String("log-level", "", "log level override")
 	repo := fs.String("repo", "", "sync only this repo by name")
-	fs.Parse(args) //nolint:errcheck // ExitOnError handles this
+	fs.Parse(args)
 
 	cfg, err := loadConfig(*configPath, config.CLIOverrides{
 		Interval: *interval,
@@ -66,7 +66,7 @@ func runSync(args []string) {
 		os.Exit(1)
 	}
 
-	logger, err := applog.Setup(cfg.Daemon.LogLevel, cfg.Daemon.LogFile)
+	logger, err := glog.Setup(cfg.Daemon.LogLevel, cfg.Daemon.LogFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "log setup: %v\n", err)
 		os.Exit(1)
