@@ -171,3 +171,6 @@ gitgogit status
 # 7. Stop when done
 gitgogit stop
 ```
+
+## Author
+Evan Hutchinson (ev-the-dev)
