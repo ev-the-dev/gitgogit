@@ -131,7 +131,11 @@ func runDaemonChild(args []string) {
 		os.Exit(1)
 	}
 
-	logger, err := glog.Setup(cfg.Daemon.LogLevel, cfg.Daemon.LogFile, io.Discard)
+	logPath := cfg.Daemon.LogFile
+	if logPath == "" {
+		logPath = config.DefaultLogPath()
+	}
+	logger, err := glog.Setup(cfg.Daemon.LogLevel, logPath, io.Discard)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "log setup: %v\n", err)
 		os.Exit(1)
