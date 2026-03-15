@@ -20,7 +20,7 @@ const hotReloadInterval = 5 * time.Second
 func withRetry(ctx context.Context, attempts int, base time.Duration, fn func() error) error {
 	const maxBackoff = 5 * time.Minute
 	var err error
-	for i := 0; i < attempts; i++ {
+	for i := range attempts {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -33,10 +33,7 @@ func withRetry(ctx context.Context, attempts int, base time.Duration, fn func() 
 		}
 
 		if i < attempts-1 {
-			backoff := base * (1 << i)
-			if backoff > maxBackoff {
-				backoff = maxBackoff
-			}
+			backoff := min(base*(1<<i), maxBackoff)
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
