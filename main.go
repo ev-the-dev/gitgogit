@@ -71,7 +71,7 @@ Flags:
 
 func runStart(args []string) {
 	fs := flag.NewFlagSet("start", flag.ExitOnError)
-	configPath := fs.String("config", config.DefaultPath(), "path to config file")
+	configPath := fs.String("config", config.DefaultConfigPath(), "path to config file")
 	fs.Parse(args)
 
 	cfg, err := loadConfig(*configPath, config.CLIOverrides{})
@@ -112,7 +112,7 @@ func runStart(args []string) {
 
 func runDaemonChild(args []string) {
 	fs := flag.NewFlagSet("daemon-child", flag.ExitOnError)
-	configPath := fs.String("config", config.DefaultPath(), "")
+	configPath := fs.String("config", config.DefaultConfigPath(), "")
 	fs.Parse(args)
 
 	cfg, err := loadConfig(*configPath, config.CLIOverrides{})
@@ -188,7 +188,7 @@ func runStatus(args []string) {
 
 func runSync(args []string) {
 	fs := flag.NewFlagSet("sync", flag.ExitOnError)
-	configPath := fs.String("config", config.DefaultPath(), "path to config file")
+	configPath := fs.String("config", config.DefaultConfigPath(), "path to config file")
 	interval := fs.String("interval", "", "poll interval override")
 	logLevel := fs.String("log-level", "", "log level override")
 	repo := fs.String("repo", "", "sync only this repo by name")

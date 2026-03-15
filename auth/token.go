@@ -13,8 +13,7 @@ import (
 type TokenProvider struct{}
 
 // InjectToken rewrites an HTTP/HTTPS URL to include OAuth2 credentials.
-// The token is read at call time so that environment variable rotation works
-// without a config reload.
+// The token is read at call time so that environment variable rotation works without a config reload.
 func InjectToken(rawURL, token string) (string, error) {
 	u, err := url.Parse(rawURL)
 	if err != nil {

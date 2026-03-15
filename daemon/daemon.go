@@ -57,13 +57,11 @@ type Daemon struct {
 	newRunner func(config.RepoConfig, *slog.Logger) syncer // nil → mirror.NewRunner
 }
 
-// New creates a Daemon from the full config.
 func New(cfg *config.Config, logger *slog.Logger) *Daemon {
 	return &Daemon{cfg: cfg, logger: logger}
 }
 
-// SyncRepo mirrors one repo with retry. It constructs a Runner, calls Sync
-// inside withRetry, and returns the results from the final attempt.
+// SyncRepo mirrors one repo with retry. It constructs a Runner, calls Sync inside withRetry, and returns the results from the final attempt.
 func (d *Daemon) SyncRepo(ctx context.Context, repo config.RepoConfig) []mirror.SyncResult {
 	runner := d.makeRunner(repo)
 	var results []mirror.SyncResult
@@ -81,9 +79,7 @@ func (d *Daemon) SyncRepo(ctx context.Context, repo config.RepoConfig) []mirror.
 	return results
 }
 
-// Run starts the polling loop. It syncs all repos immediately, then ticks at
-// the configured interval. Blocks until ctx is cancelled, then waits for all
-// in-flight syncs to complete before returning.
+// Run starts the polling loop. It syncs all repos immediately, then ticks at the configured interval. Blocks until ctx is cancelled, then waits for all in-flight syncs to complete before returning.
 func (d *Daemon) Run(ctx context.Context) {
 	d.runOnce(ctx)
 

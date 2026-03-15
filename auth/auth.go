@@ -30,7 +30,6 @@ func Resolve(cfg config.AuthConfig) (Provider, error) {
 	}
 }
 
-// NoAuthProvider is used when no authentication is configured (public repos).
 type NoAuthProvider struct{}
 
 func (NoAuthProvider) Prepare(rawURL string, _ config.AuthConfig) (string, Env, error) {

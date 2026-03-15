@@ -12,9 +12,7 @@ import (
 	"gitgogit/config"
 )
 
-// WritePID atomically writes the current process PID to path.
-// It creates parent directories as needed, writes to a temp file in the same
-// directory, then renames it into place so readers never see a partial write.
+// WritePID atomically writes the current process PID to path. It creates parent directories as needed, writes to a temp file in the same directory, then renames it into place so readers never see a partial write.
 func WritePID(path string) error {
 	if err := os.MkdirAll(filepath.Dir(path), config.DirPerm); err != nil {
 		return fmt.Errorf("create pid dir: %w", err)
@@ -52,9 +50,7 @@ func RemovePID(path string) error {
 	return err
 }
 
-// IsRunning reads the PID file and checks whether the process is alive.
-// Returns running=false (no error) if the file does not exist.
-// Uses signal 0 to test liveness without sending a real signal.
+// IsRunning reads the PID file and checks whether the process is alive. Returns running=false (no error) if the file does not exist. Uses signal 0 to test liveness without sending a real signal.
 func IsRunning(path string) (pid int, running bool, err error) {
 	pid, err = ReadPID(path)
 	if err != nil {

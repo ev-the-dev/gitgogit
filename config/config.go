@@ -79,19 +79,16 @@ type CLIOverrides struct {
 	Repo       string
 }
 
-// DefaultPath returns the default config file location.
-func DefaultPath() string {
+func DefaultConfigPath() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".config", "gitgogit", "config.yaml")
 }
 
-// DefaultPIDPath returns the default PID file location.
 func DefaultPIDPath() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".local", "share", "gitgogit", "gitgogit.pid")
 }
 
-// DefaultLogPath returns the default log file location.
 func DefaultLogPath() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".local", "share", "gitgogit", "gitgogit.log")

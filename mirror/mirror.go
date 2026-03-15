@@ -100,8 +100,7 @@ func (r *Runner) Push(ctx context.Context, target config.MirrorTarget) error {
 	return r.runGit(ctx, extraEnv, "-C", r.CacheDir, "push", "--mirror", resolvedURL)
 }
 
-// Sync clones if needed, fetches, then pushes to all configured mirrors.
-// Returns one SyncResult per mirror target.
+// Sync clones if needed, fetches, then pushes to all configured mirrors. Returns one SyncResult per mirror target.
 func (r *Runner) Sync(ctx context.Context) []SyncResult {
 	var results []SyncResult
 
