@@ -1,5 +1,8 @@
-BINARY  := gitgogit
-PREFIX  ?= /usr/local
+BINARY   := gitgogit
+PREFIX   ?= /usr/local
+REGISTRY ?= $(DOCKER_REGISTRY)
+VERSION  ?= $(shell cat .version)
+IMAGE    := $(REGISTRY)/$(BINARY)
 
 help: ## Display available Make targets
 	@echo ""
@@ -36,6 +39,7 @@ govulncheck: ## Scan Go dependencies for known vulnerabilities
 
 docker-build: ## Build Docker image
 	docker build -t $(BINARY):latest .
+	@if [ -n "$(REGISTRY)" ]; then docker tag $(BINARY):latest $(IMAGE):$(VERSION); fi
 
 docker-run: docker-build ## Run container with mounted config
 	env | grep -iE 'TOKEN|KEY' > /tmp/gitgogit-env 2>/dev/null || true
@@ -46,8 +50,12 @@ docker-run: docker-build ## Run container with mounted config
 		$(BINARY):latest
 	rm -f /tmp/gitgogit-env
 
+docker-push: docker-build ## Push Docker image to registry (requires DOCKER_REGISTRY)
+	@if [ -z "$(REGISTRY)" ]; then echo "error: set DOCKER_REGISTRY env var"; exit 1; fi
+	docker push $(IMAGE):$(VERSION)
+
 clean: ## Remove build artifacts
 	rm -f $(BINARY)
 
-.PHONY: help build install system-install system-uninstall test vet lint govulncheck docker-build docker-run clean
+.PHONY: help build install system-install system-uninstall test vet lint govulncheck docker-build docker-run docker-push clean
 .DEFAULT_GOAL := help
