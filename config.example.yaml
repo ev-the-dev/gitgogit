@@ -7,6 +7,7 @@ repos:
         key: ~/.ssh/id_ed25519
     mirrors:
       - url: git@codeberg.org:myorg/my-project.git
+        push_strategy: branches+tags   # or "mirror" (default) for bare backups
         auth:
           type: ssh
           key: ~/.ssh/id_ed25519
@@ -21,3 +22,6 @@ daemon:
   retry_backoff: 10s     # initial backoff between retries (doubles each attempt)
   log_level: info        # debug | info | warn | error
   log_file: ~/.local/share/gitgogit/gitgogit.log
+  # web:
+  #   enabled: false     # enable web dashboard
+  #   listen: ":8080"    # listen address

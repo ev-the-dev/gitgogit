@@ -155,7 +155,7 @@ func silentLogger() *slog.Logger {
 
 func TestDaemon_Run_StopsOnContextCancel(t *testing.T) {
 	cfg := minimalConfig(10 * time.Millisecond)
-	d := New(cfg, silentLogger())
+	d := New(cfg, silentLogger(), nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -186,7 +186,7 @@ func TestDaemon_Run_CallsRunOnce(t *testing.T) {
 		},
 	}
 
-	d := New(cfg, silentLogger())
+	d := New(cfg, silentLogger(), nil)
 	// Override the runner so we can count calls without hitting git.
 	d.newRunner = func(repo config.RepoConfig, logger *slog.Logger) (syncer, error) {
 		return &fakeSyncer{count: &syncCount}, nil
@@ -223,7 +223,7 @@ func TestDaemon_Run_GracefulShutdown(t *testing.T) {
 		},
 	}
 
-	d := New(cfg, silentLogger())
+	d := New(cfg, silentLogger(), nil)
 	d.newRunner = func(repo config.RepoConfig, logger *slog.Logger) (syncer, error) {
 		return &blockingSyncer{started: started, finished: finished}, nil
 	}

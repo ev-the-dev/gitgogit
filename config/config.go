@@ -57,13 +57,20 @@ type RepoConfig struct {
 	Mirrors []MirrorTarget `yaml:"mirrors"`
 }
 
+// WebConfig holds optional web dashboard settings.
+type WebConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Listen  string `yaml:"listen"`
+}
+
 // DaemonConfig holds daemon-wide settings.
 type DaemonConfig struct {
-	Interval      Duration `yaml:"interval"`
-	RetryAttempts int      `yaml:"retry_attempts"`
-	RetryBackoff  Duration `yaml:"retry_backoff"`
-	LogLevel      string   `yaml:"log_level"`
-	LogFile       string   `yaml:"log_file"`
+	Interval      Duration  `yaml:"interval"`
+	RetryAttempts int       `yaml:"retry_attempts"`
+	RetryBackoff  Duration  `yaml:"retry_backoff"`
+	LogLevel      string    `yaml:"log_level"`
+	LogFile       string    `yaml:"log_file"`
+	Web           WebConfig `yaml:"web"`
 }
 
 // Config is the root configuration document.
@@ -167,6 +174,9 @@ func Load(path string) (*Config, error) {
 	}
 	if cfg.Daemon.LogLevel == "" {
 		cfg.Daemon.LogLevel = "info"
+	}
+	if cfg.Daemon.Web.Enabled && cfg.Daemon.Web.Listen == "" {
+		cfg.Daemon.Web.Listen = ":8080"
 	}
 
 	return &cfg, nil

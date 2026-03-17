@@ -10,12 +10,13 @@ import (
 
 	"gitgogit/config"
 	"gitgogit/mirror"
+	"gitgogit/status"
 )
 
 const (
-	hotReloadInterval   = 5 * time.Second
-	maxConcurrentSyncs  = 10
-	shutdownTimeout     = 30 * time.Second
+	hotReloadInterval  = 5 * time.Second
+	maxConcurrentSyncs = 10
+	shutdownTimeout    = 30 * time.Second
 )
 
 // withRetry calls fn up to attempts times with exponential backoff.
@@ -59,11 +60,12 @@ type Daemon struct {
 	mu        sync.RWMutex // guards cfg
 	logger    *slog.Logger
 	wg        sync.WaitGroup
+	Status    *status.Store                                          // nil when web UI is disabled
 	newRunner func(config.RepoConfig, *slog.Logger) (syncer, error) // nil → mirror.NewRunner
 }
 
-func New(cfg *config.Config, logger *slog.Logger) *Daemon {
-	return &Daemon{cfg: cfg, logger: logger}
+func New(cfg *config.Config, logger *slog.Logger, store *status.Store) *Daemon {
+	return &Daemon{cfg: cfg, logger: logger, Status: store}
 }
 
 // SyncRepo mirrors one repo with retry. It constructs a Runner, calls Sync inside withRetry, and returns the results from the final attempt.
@@ -111,10 +113,71 @@ func (d *Daemon) SyncRepo(ctx context.Context, repo config.RepoConfig) []mirror.
 	return results
 }
 
+// TriggerSync starts a sync for a single repo by name. Returns an error if the
+// repo is not found or a sync is already in progress. The sync runs in the
+// background and results are recorded in the status store.
+func (d *Daemon) TriggerSync(ctx context.Context, repoName string) error {
+	d.mu.RLock()
+	var repo config.RepoConfig
+	found := false
+	for _, r := range d.cfg.Repos {
+		if r.Name == repoName {
+			repo = r
+			found = true
+			break
+		}
+	}
+	d.mu.RUnlock()
+
+	if !found {
+		return fmt.Errorf("repo %q not found", repoName)
+	}
+
+	if d.Status == nil {
+		return fmt.Errorf("status store not available")
+	}
+
+	unlock, ok := d.Status.TryLockRepo(repoName)
+	if !ok {
+		return fmt.Errorf("sync already in progress for %q", repoName)
+	}
+
+	d.Status.MarkSyncing(repoName)
+	d.wg.Add(1)
+	go func() {
+		defer d.wg.Done()
+		defer unlock()
+		results := d.SyncRepo(ctx, repo)
+		d.Status.Record(repo.Name, results)
+		for _, r := range results {
+			if r.Err != nil {
+				d.logger.Error("sync failed",
+					slog.String("repo", r.Repo),
+					slog.String("mirror", r.MirrorURL),
+					slog.String("error", r.Err.Error()),
+				)
+			} else {
+				d.logger.Info("synced",
+					slog.String("repo", r.Repo),
+					slog.String("mirror", r.MirrorURL),
+				)
+			}
+		}
+	}()
+
+	return nil
+}
+
 // Run starts the polling loop. It syncs all repos immediately, then ticks at the configured interval.
 // If configPath is non-empty, a goroutine watches the file for changes and hot-reloads on modification.
 // Blocks until ctx is cancelled, then waits for all in-flight syncs to complete before returning.
 func (d *Daemon) Run(ctx context.Context, configPath string) {
+	if d.Status != nil {
+		d.mu.RLock()
+		d.Status.EnsureRepos(d.cfg.Repos)
+		d.mu.RUnlock()
+	}
+
 	if configPath != "" {
 		var lastMod time.Time
 		if info, err := os.Stat(configPath); err == nil {
@@ -131,6 +194,11 @@ func (d *Daemon) Run(ctx context.Context, configPath string) {
 					d.logger.Warn("config reload failed", slog.String("error", err.Error()))
 				} else {
 					d.logger.Info("config reloaded", slog.String("path", configPath))
+					if d.Status != nil {
+						d.mu.RLock()
+						d.Status.EnsureRepos(d.cfg.Repos)
+						d.mu.RUnlock()
+					}
 				}
 			}
 		}()
@@ -206,6 +274,9 @@ func (d *Daemon) runOnce(ctx context.Context) {
 			sem <- struct{}{}
 			defer func() { <-sem }()
 			results := d.SyncRepo(ctx, repo)
+			if d.Status != nil {
+				d.Status.Record(repo.Name, results)
+			}
 			for _, r := range results {
 				if r.Err != nil {
 					d.logger.Error("sync failed",

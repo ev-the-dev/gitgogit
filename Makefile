@@ -38,11 +38,13 @@ docker-build: ## Build Docker image
 	docker build -t $(BINARY):latest .
 
 docker-run: docker-build ## Run container with mounted config
+	env | grep -iE 'TOKEN|KEY' > /tmp/gitgogit-env 2>/dev/null || true
 	docker run --rm --network host \
-		-v $${CONFIG:-config.yaml}:/home/gitgogit/.config/gitgogit/config.yaml:ro \
+		-v $$(realpath $${CONFIG:-config.yaml}):/home/gitgogit/.config/gitgogit/config.yaml:ro \
 		-v gitgogit-cache:/home/gitgogit/.local/share/gitgogit \
-		--env-file <(env | grep -iE 'TOKEN|KEY') \
+		--env-file /tmp/gitgogit-env \
 		$(BINARY):latest
+	rm -f /tmp/gitgogit-env
 
 clean: ## Remove build artifacts
 	rm -f $(BINARY)
