@@ -68,7 +68,7 @@ func TestWithRetry_ExponentialBackoff(t *testing.T) {
 	calls := 0
 	timestamps := []time.Time{}
 
-	withRetry(context.Background(), 4, base, func() error {
+	_ = withRetry(context.Background(), 4, base, func() error {
 		timestamps = append(timestamps, time.Now())
 		calls++
 		return errTest
@@ -155,7 +155,7 @@ func silentLogger() *slog.Logger {
 
 func TestDaemon_Run_StopsOnContextCancel(t *testing.T) {
 	cfg := minimalConfig(10 * time.Millisecond)
-	d := New(cfg, silentLogger())
+	d := New(cfg, silentLogger(), nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -186,10 +186,10 @@ func TestDaemon_Run_CallsRunOnce(t *testing.T) {
 		},
 	}
 
-	d := New(cfg, silentLogger())
+	d := New(cfg, silentLogger(), nil)
 	// Override the runner so we can count calls without hitting git.
-	d.newRunner = func(repo config.RepoConfig, logger *slog.Logger) syncer {
-		return &fakeSyncer{count: &syncCount}
+	d.newRunner = func(repo config.RepoConfig, logger *slog.Logger) (syncer, error) {
+		return &fakeSyncer{count: &syncCount}, nil
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -223,9 +223,9 @@ func TestDaemon_Run_GracefulShutdown(t *testing.T) {
 		},
 	}
 
-	d := New(cfg, silentLogger())
-	d.newRunner = func(repo config.RepoConfig, logger *slog.Logger) syncer {
-		return &blockingSyncer{started: started, finished: finished}
+	d := New(cfg, silentLogger(), nil)
+	d.newRunner = func(repo config.RepoConfig, logger *slog.Logger) (syncer, error) {
+		return &blockingSyncer{started: started, finished: finished}, nil
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

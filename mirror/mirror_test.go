@@ -102,11 +102,11 @@ func TestRunner_Sync_LocalRepos(t *testing.T) {
 		t.Errorf("Sync() error: %v", results[0].Err)
 	}
 
-	// Verify the mirror has the commit.
-	cmd := exec.Command("git", "-C", mirrorDir, "log", "--oneline")
+	// Verify the mirror has refs (push --mirror overwrites the bare repo's HEAD).
+	cmd := exec.Command("git", "-C", mirrorDir, "rev-parse", "HEAD")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Fatalf("git log on mirror: %v\n%s", err, out)
+		t.Fatalf("git rev-parse HEAD on mirror: %v\n%s", err, out)
 	}
 	if len(out) == 0 {
 		t.Error("mirror has no commits after sync")

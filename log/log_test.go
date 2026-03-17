@@ -38,10 +38,11 @@ func TestParseLevel(t *testing.T) {
 }
 
 func TestSetup_NoLogFile(t *testing.T) {
-	logger, err := Setup("info", "", os.Stdout)
+	logger, closeLog, err := Setup("info", "", os.Stdout)
 	if err != nil {
 		t.Fatalf("Setup() error: %v", err)
 	}
+	defer func() { _ = closeLog() }()
 	if logger == nil {
 		t.Fatal("Setup() returned nil logger")
 	}
@@ -51,10 +52,11 @@ func TestSetup_WithLogFile(t *testing.T) {
 	dir := t.TempDir()
 	logPath := filepath.Join(dir, "subdir", "app.log")
 
-	logger, err := Setup("debug", logPath, io.Discard)
+	logger, closeLog, err := Setup("debug", logPath, io.Discard)
 	if err != nil {
 		t.Fatalf("Setup() error: %v", err)
 	}
+	defer func() { _ = closeLog() }()
 	if logger == nil {
 		t.Fatal("Setup() returned nil logger")
 	}
@@ -74,10 +76,11 @@ func TestMultiHandler_DeliversToBoth(t *testing.T) {
 	dir := t.TempDir()
 	logPath := filepath.Join(dir, "app.log")
 
-	logger, err := Setup("info", logPath, io.Discard)
+	logger, closeLog, err := Setup("info", logPath, io.Discard)
 	if err != nil {
 		t.Fatalf("Setup() error: %v", err)
 	}
+	defer func() { _ = closeLog() }()
 
 	logger.Info("hello world")
 

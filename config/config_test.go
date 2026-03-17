@@ -1,11 +1,20 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 )
+
+func validDaemon() DaemonConfig {
+	return DaemonConfig{
+		Interval:      Duration{60 * time.Second},
+		RetryAttempts: 3,
+		RetryBackoff:  Duration{10 * time.Second},
+	}
+}
 
 func writeConfig(t *testing.T, content string) string {
 	t.Helper()
@@ -18,25 +27,30 @@ func writeConfig(t *testing.T, content string) string {
 }
 
 func TestLoad_Valid(t *testing.T) {
-	path := writeConfig(t, `
+	keyFile := filepath.Join(t.TempDir(), "id_test")
+	if err := os.WriteFile(keyFile, []byte("fake key"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	path := writeConfig(t, fmt.Sprintf(`
 repos:
   - name: myrepo
     source:
       url: git@github.com:org/repo.git
       auth:
         type: ssh
-        key: /tmp/id_ed25519
+        key: %s
     mirrors:
       - url: git@codeberg.org:org/repo.git
         auth:
           type: ssh
-          key: /tmp/id_ed25519
+          key: %s
 daemon:
   interval: 30s
   retry_attempts: 5
   retry_backoff: 5s
   log_level: debug
-`)
+`, keyFile, keyFile))
 	cfg, err := Load(path)
 	if err != nil {
 		t.Fatalf("Load() error: %v", err)
@@ -145,6 +159,7 @@ func TestValidate_Valid(t *testing.T) {
 				},
 			},
 		},
+		Daemon: validDaemon(),
 	}
 	if err := cfg.Validate(); err != nil {
 		t.Errorf("Validate() unexpected error: %v", err)
@@ -159,6 +174,7 @@ func TestValidate_MissingName(t *testing.T) {
 				Mirrors: []MirrorTarget{{URL: "git@codeberg.org:org/repo.git"}},
 			},
 		},
+		Daemon: validDaemon(),
 	}
 	if err := cfg.Validate(); err == nil {
 		t.Error("expected error for missing repo name")
@@ -171,7 +187,7 @@ func TestValidate_DuplicateName(t *testing.T) {
 		Source:  SourceConfig{URL: "git@github.com:org/repo.git"},
 		Mirrors: []MirrorTarget{{URL: "git@codeberg.org:org/repo.git"}},
 	}
-	cfg := &Config{Repos: []RepoConfig{repo, repo}}
+	cfg := &Config{Repos: []RepoConfig{repo, repo}, Daemon: validDaemon()}
 	if err := cfg.Validate(); err == nil {
 		t.Error("expected error for duplicate repo name")
 	}
@@ -185,6 +201,7 @@ func TestValidate_MissingSourceURL(t *testing.T) {
 				Mirrors: []MirrorTarget{{URL: "git@codeberg.org:org/repo.git"}},
 			},
 		},
+		Daemon: validDaemon(),
 	}
 	if err := cfg.Validate(); err == nil {
 		t.Error("expected error for missing source URL")
@@ -199,6 +216,7 @@ func TestValidate_NoMirrors(t *testing.T) {
 				Source: SourceConfig{URL: "git@github.com:org/repo.git"},
 			},
 		},
+		Daemon: validDaemon(),
 	}
 	if err := cfg.Validate(); err == nil {
 		t.Error("expected error for no mirrors")
@@ -214,6 +232,7 @@ func TestValidate_SSHMissingKey(t *testing.T) {
 				Mirrors: []MirrorTarget{{URL: "git@codeberg.org:org/repo.git"}},
 			},
 		},
+		Daemon: validDaemon(),
 	}
 	if err := cfg.Validate(); err == nil {
 		t.Error("expected error for ssh auth missing key")
@@ -230,6 +249,7 @@ func TestValidate_DuplicateMirrorURL(t *testing.T) {
 				Mirrors: []MirrorTarget{mirror, mirror},
 			},
 		},
+		Daemon: validDaemon(),
 	}
 	if err := cfg.Validate(); err == nil {
 		t.Error("expected error for duplicate mirror URL")
@@ -245,6 +265,7 @@ func TestValidate_TokenMissingEnv(t *testing.T) {
 				Mirrors: []MirrorTarget{{URL: "https://gitlab.com/org/repo.git", Auth: AuthConfig{Type: "token"}}},
 			},
 		},
+		Daemon: validDaemon(),
 	}
 	if err := cfg.Validate(); err == nil {
 		t.Error("expected error for token auth missing env")
