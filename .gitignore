@@ -3,5 +3,5 @@ dist/
 gitgogit
 
 ## Local Testing
-Dockerfile
 config.yaml
+test-config.yaml

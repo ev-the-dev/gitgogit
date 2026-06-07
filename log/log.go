@@ -9,13 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-)
 
-const (
-	// dirPerm grants rwx to owner, r-x to group, nothing to others.
-	dirPerm os.FileMode = 0o750
-	// filePerm grants rw- to owner, r-- to group, nothing to others.
-	filePerm os.FileMode = 0o640
+	"gitgogit/config"
 )
 
 // multiHandler fans a single Record out to multiple slog.Handlers.
@@ -81,27 +76,27 @@ func ParseLevel(s string) (slog.Level, error) {
 // If logFilePath is non-empty a JSON handler is also added, writing to that
 // file (created/appended). If out is io.Discard and logFilePath is empty the
 // logger silently discards all output.
-func Setup(levelStr, logFilePath string, out io.Writer) (*slog.Logger, error) {
+func Setup(levelStr, logFilePath string, out io.Writer) (*slog.Logger, func() error, error) {
 	level, err := ParseLevel(levelStr)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	opts := &slog.HandlerOptions{Level: level}
 	textHandler := slog.NewTextHandler(out, opts)
 
 	if logFilePath == "" {
-		return slog.New(textHandler), nil
+		return slog.New(textHandler), func() error { return nil }, nil
 	}
 
-	if err := os.MkdirAll(filepath.Dir(logFilePath), dirPerm); err != nil {
-		return nil, fmt.Errorf("create log dir: %w", err)
+	if err := os.MkdirAll(filepath.Dir(logFilePath), config.DirPerm); err != nil {
+		return nil, nil, fmt.Errorf("create log dir: %w", err)
 	}
-	f, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, filePerm)
+	f, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, config.FilePerm)
 	if err != nil {
-		return nil, fmt.Errorf("open log file: %w", err)
+		return nil, nil, fmt.Errorf("open log file: %w", err)
 	}
 	fileHandler := slog.NewJSONHandler(f, opts)
 
-	return slog.New(multiHandler{handlers: []slog.Handler{textHandler, fileHandler}}), nil
+	return slog.New(multiHandler{handlers: []slog.Handler{textHandler, fileHandler}}), f.Close, nil
 }

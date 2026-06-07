@@ -9,11 +9,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"gitgogit/auth"
 	"gitgogit/config"
 )
+
+var credentialPattern = regexp.MustCompile(`://[^@/\s]+:[^@/\s]+@`)
 
 // SyncResult captures the outcome of one sync attempt for one mirror target.
 type SyncResult struct {
@@ -30,14 +33,17 @@ type Runner struct {
 }
 
 // NewRunner constructs a Runner with the default cache directory.
-func NewRunner(repo config.RepoConfig, logger *slog.Logger) *Runner {
-	home, _ := os.UserHomeDir()
+func NewRunner(repo config.RepoConfig, logger *slog.Logger) (*Runner, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("determine cache dir: %w", err)
+	}
 	cacheDir := filepath.Join(home, ".local", "share", "gitgogit", "repos", repo.Name+".git")
 	return &Runner{
 		Repo:     repo,
 		CacheDir: cacheDir,
 		Logger:   logger,
-	}
+	}, nil
 }
 
 // EnsureCloned clones the source as a bare mirror if the cache dir doesn't exist.
@@ -68,7 +74,7 @@ func (r *Runner) EnsureCloned(ctx context.Context) error {
 		return err
 	}
 
-	r.Logger.Info("cloning source repo", "repo", r.Repo.Name, "url", redactURL(resolvedURL))
+	r.Logger.Info("cloning source repo", slog.String("repo", r.Repo.Name), slog.String("url", redactURL(resolvedURL)))
 	return r.runGit(ctx, extraEnv, "clone", "--mirror", resolvedURL, r.CacheDir)
 }
 
@@ -82,7 +88,7 @@ func (r *Runner) Fetch(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	r.Logger.Info("fetching", "repo", r.Repo.Name)
+	r.Logger.Info("fetching", slog.String("repo", r.Repo.Name))
 	return r.runGit(ctx, extraEnv, "-C", r.CacheDir, "fetch", "--prune", "origin")
 }
 
@@ -96,7 +102,7 @@ func (r *Runner) Push(ctx context.Context, target config.MirrorTarget) error {
 	if err != nil {
 		return err
 	}
-	r.Logger.Info("pushing", "repo", r.Repo.Name, "mirror", redactURL(resolvedURL))
+	r.Logger.Info("pushing", slog.String("repo", r.Repo.Name), slog.String("mirror", redactURL(resolvedURL)))
 
 	args := []string{"-C", r.CacheDir, "push", "--prune", resolvedURL,
 		"+refs/heads/*:refs/heads/*",
@@ -156,7 +162,11 @@ func (r *Runner) runGit(ctx context.Context, extraEnv []string, args ...string) 
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("git %s: %w\n%s", strings.Join(args, " "), err, buf.String())
+		safeArgs := make([]string, len(args))
+		for i, a := range args {
+			safeArgs[i] = redactURL(a)
+		}
+		return fmt.Errorf("git %s: %w\n%s", strings.Join(safeArgs, " "), err, sanitizeOutput(buf.String()))
 	}
 	return nil
 }
@@ -168,4 +178,9 @@ func redactURL(rawURL string) string {
 		return rawURL
 	}
 	return u.Redacted()
+}
+
+// sanitizeOutput scrubs credential-bearing URLs from git subprocess output.
+func sanitizeOutput(s string) string {
+	return credentialPattern.ReplaceAllString(s, "://[REDACTED]@")
 }

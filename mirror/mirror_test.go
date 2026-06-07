@@ -25,7 +25,10 @@ func initBareRepo(t *testing.T, path string) {
 	if err := os.MkdirAll(path, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command("git", "init", "--bare", path)
+	// Use -b main so the bare repo's HEAD matches the source branch created by
+	// initRepoWithCommit; otherwise the default branch name depends on the host's
+	// init.defaultBranch and `git log` on the mirror fails when they differ.
+	cmd := exec.Command("git", "init", "--bare", "-b", "main", path)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {

@@ -1,0 +1,8 @@
+gitgogit
+*.git
+.dockerignore
+Dockerfile
+LICENSE
+README.md
+docs/
+config.example.yaml

@@ -4,6 +4,8 @@
 
 # gitgogit
 
+![gitgogit dashboard](dashboard.png)
+
 A lightweight Git repository mirroring daemon. It watches one or more source repositories and pushes every change to one or more mirror remotes.
 
 ## Install
@@ -35,7 +37,7 @@ sudo mv gitgogit-<os>-<arch> /usr/local/bin/gitgogit
 
 ### Build from source
 
-Requires Go 1.24 or later. The only external dependency is `gopkg.in/yaml.v3`.
+Requires Go 1.26 or later. The only external dependency is `gopkg.in/yaml.v3`.
 
 **User install** — builds and places the binary in `$(go env GOPATH)/bin` (typically `~/go/bin`). No `sudo` required; just ensure `~/go/bin` is on your `$PATH`.
 
@@ -63,6 +65,31 @@ make build
 
 ```sh
 sudo make system-uninstall
+```
+
+**Other make targets:**
+
+```sh
+make help          # show all available targets
+make test          # run tests
+make vet           # run go vet
+make lint          # run golangci-lint
+make govulncheck   # scan for known vulnerabilities
+```
+
+## Docker
+
+```sh
+make docker-build                         # build image
+CONFIG=config.yaml make docker-run        # run with mounted config
+```
+
+The container runs the daemon in the foreground using `--daemon-child`. Set `log_file: /dev/stdout` in the config for container-friendly logging.
+
+For SSH auth, mount your key into the container:
+
+```sh
+-v ~/.ssh/id_ed25519:/home/gitgogit/.ssh/id_ed25519:ro
 ```
 
 ## Config file
@@ -95,6 +122,9 @@ daemon:
   retry_backoff: 10s     # base backoff; doubles each attempt (default: 10s)
   log_level: info        # debug | info | warn | error (default: info)
   log_file: ""           # path to JSON log file (default: ~/.local/share/gitgogit/gitgogit.log)
+  web:
+    enabled: false       # enable web dashboard (default: false)
+    listen: ":8080"      # listen address (default: :8080)
 ```
 
 ### Auth types
@@ -149,7 +179,7 @@ Send `SIGTERM` to the running daemon.
 gitgogit stop
 ```
 
-The daemon finishes any in-flight syncs before exiting.
+The daemon finishes any in-flight syncs before exiting (30s timeout).
 
 ### `status`
 
@@ -186,6 +216,17 @@ gitgogit add [--config PATH]
 ```
 
 Prompts for the repo name, source URL, source auth, and one or more mirror URLs with their auth. Writes the updated config back to disk.
+
+## Web dashboard
+
+Enable with `web.enabled: true` in the daemon config. Provides:
+
+- Status overview of all repos and mirrors (last sync time, success/error)
+- Manual sync trigger per repo
+- Recent error log
+- `/healthz` endpoint for container orchestrators (returns 200/503 JSON)
+
+The dashboard auto-refreshes every 30s (3s while a sync is in progress).
 
 ## Daemon lifecycle
 
